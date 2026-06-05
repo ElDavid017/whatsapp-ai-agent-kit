@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+# caché de compilación incremental — rompe el build de Nixpacks si se sube
+data/
+auth/
+.env
+.env.local
+.env*.local
+.restart
+prompts/negocio.md
+logs/
