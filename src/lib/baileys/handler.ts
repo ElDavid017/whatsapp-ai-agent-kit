@@ -107,5 +107,24 @@ export async function handleIncomingMessages(
 
     insertMessage(convo.id, "assistant", reply);
     await sock.sendMessage(remoteJid, { text: reply });
+
+    // Si el LLM derivó a humano, notificar al equipo por WhatsApp
+    const afterMode = getConversationById(convo.id);
+    if (afterMode?.mode === "HUMAN") {
+      const teamPhone = process.env.TEAM_PHONE?.trim();
+      if (teamPhone) {
+        const teamJid = `${teamPhone}@s.whatsapp.net`;
+        const leadInfo = [
+          `🔔 *Nuevo lead para atender*`,
+          `📱 WhatsApp: +${phone}`,
+          name ? `👤 Nombre: ${name}` : null,
+          `💬 Último mensaje: ${finalText.substring(0, 120)}`,
+        ]
+          .filter(Boolean)
+          .join("\n");
+        await sock.sendMessage(teamJid, { text: leadInfo });
+        logger.info({ teamPhone, phone }, "Notificación enviada al equipo");
+      }
+    }
   }
 }
