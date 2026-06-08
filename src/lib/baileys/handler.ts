@@ -1,5 +1,6 @@
 import type { WASocket, BaileysEventMap } from "@whiskeysockets/baileys";
 import { downloadMediaMessage } from "@whiskeysockets/baileys";
+import pino from "pino";
 import {
   getOrCreateConversation,
   getConversationById,
@@ -8,6 +9,8 @@ import {
 } from "../db.js";
 import { generateReply } from "../openrouter.js";
 import { transcribeAudio } from "../whisper.js";
+
+const logger = pino({ level: (process.env.LOG_LEVEL ?? "info") as pino.Level });
 
 export async function handleIncomingMessages(
   sock: WASocket,
@@ -43,16 +46,16 @@ export async function handleIncomingMessages(
     let displayText: string | null = null;
 
     if (m.imageMessage) {
+      // displayText fuera del try: aunque falle la descarga procesamos el texto
+      const caption = m.imageMessage.caption;
+      displayText = caption ? `🖼️ ${caption}` : "🖼️ [Imagen]";
       try {
         const buffer = (await downloadMediaMessage(msg, "buffer", {})) as Buffer;
-        imageContent = {
-          base64: buffer.toString("base64"),
-          mimeType: m.imageMessage.mimetype ?? "image/jpeg",
-        };
-        const caption = m.imageMessage.caption;
-        displayText = caption ? `🖼️ ${caption}` : "🖼️ [Imagen]";
-      } catch {
-        // Ignorar si falla la descarga
+        const mimeType = m.imageMessage.mimetype ?? "image/jpeg";
+        imageContent = { base64: buffer.toString("base64"), mimeType };
+        logger.info({ bytes: buffer.length, mimeType }, "Imagen descargada");
+      } catch (err) {
+        logger.error({ err }, "Error descargando imagen — se procesa solo el texto");
       }
     }
 
@@ -91,6 +94,10 @@ export async function handleIncomingMessages(
     if (!fresh || fresh.mode !== "AI") continue;
 
     const history = getRecentHistory(convo.id, 20);
+    logger.info(
+      { hasImage: !!imageContent, historyLen: history.length },
+      "Generando respuesta"
+    );
     const reply = await generateReply({
       history,
       conversationId: convo.id,
