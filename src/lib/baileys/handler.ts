@@ -113,10 +113,14 @@ export async function handleIncomingMessages(
     if (afterMode?.mode === "HUMAN") {
       const teamPhonesRaw = process.env.TEAM_PHONES?.trim() ?? process.env.TEAM_PHONE?.trim();
       if (teamPhonesRaw) {
+        const isLid = remoteJid.endsWith("@lid");
+        const contactLine = isLid
+          ? `🔍 Buscar en WhatsApp por nombre: *${name ?? "desconocido"}*`
+          : `📱 WhatsApp: +${phone}`;
         const leadInfo = [
           `🔔 *Nuevo lead para atender*`,
-          `📱 WhatsApp: +${phone}`,
-          name ? `👤 Nombre: ${name}` : null,
+          contactLine,
+          name && !isLid ? `👤 Nombre: ${name}` : null,
           `💬 Último mensaje: ${finalText.substring(0, 120)}`,
         ]
           .filter(Boolean)
