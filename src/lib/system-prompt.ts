@@ -18,7 +18,15 @@ export function buildSystemPrompt(): string {
     return FALLBACK_PROMPT;
   }
 
-  const negocio = fs.readFileSync(NEGOCIO_PATH, "utf-8");
+  const negocioRaw = fs.readFileSync(NEGOCIO_PATH, "utf-8");
+  const fechaActual = new Date().toLocaleDateString("es-EC", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "America/Guayaquil",
+  });
+  const negocio = negocioRaw.replace(/\{\{FECHA_ACTUAL\}\}/g, fechaActual);
 
   return `Eres el asistente de IA de un negocio. Atiendes a clientes potenciales por WhatsApp.
 Tu misión es calificar leads y agendar llamadas de diagnóstico con los que encajen.
