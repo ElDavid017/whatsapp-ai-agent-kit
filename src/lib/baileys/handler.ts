@@ -111,9 +111,8 @@ export async function handleIncomingMessages(
     // Si el LLM derivó a humano, notificar al equipo por WhatsApp
     const afterMode = getConversationById(convo.id);
     if (afterMode?.mode === "HUMAN") {
-      const teamPhone = process.env.TEAM_PHONE?.trim();
-      if (teamPhone) {
-        const teamJid = `${teamPhone}@s.whatsapp.net`;
+      const teamPhonesRaw = process.env.TEAM_PHONES?.trim() ?? process.env.TEAM_PHONE?.trim();
+      if (teamPhonesRaw) {
         const leadInfo = [
           `🔔 *Nuevo lead para atender*`,
           `📱 WhatsApp: +${phone}`,
@@ -122,8 +121,11 @@ export async function handleIncomingMessages(
         ]
           .filter(Boolean)
           .join("\n");
-        await sock.sendMessage(teamJid, { text: leadInfo });
-        logger.info({ teamPhone, phone }, "Notificación enviada al equipo");
+        const teamPhones = teamPhonesRaw.split(",").map((p) => p.trim()).filter(Boolean);
+        for (const tp of teamPhones) {
+          await sock.sendMessage(`${tp}@s.whatsapp.net`, { text: leadInfo });
+        }
+        logger.info({ teamPhones, phone }, "Notificación enviada al equipo");
       }
     }
   }
