@@ -37,16 +37,34 @@ export async function validateApiKey(): Promise<{ ok: boolean; error?: string }>
 export async function generateReply(input: {
   history: Message[];
   conversationId: number;
+  imageContent?: { base64: string; mimeType: string };
 }): Promise<string> {
   const client = getClient();
   const systemPrompt = buildSystemPrompt();
 
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: "system", content: systemPrompt },
-    ...input.history.map((m) => ({
-      role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
-      content: m.content,
-    })),
+    ...input.history.map((m, i) => {
+      const isLast = i === input.history.length - 1;
+      if (isLast && m.role === "user" && input.imageContent) {
+        return {
+          role: "user" as const,
+          content: [
+            { type: "text" as const, text: m.content },
+            {
+              type: "image_url" as const,
+              image_url: {
+                url: `data:${input.imageContent.mimeType};base64,${input.imageContent.base64}`,
+              },
+            },
+          ],
+        };
+      }
+      return {
+        role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
+        content: m.content,
+      };
+    }),
   ];
 
   let turns = 0;
